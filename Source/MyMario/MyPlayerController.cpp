@@ -99,7 +99,7 @@ void AMyPlayerController::HandleMove(const FInputActionValue& Value)
 
 	if (ControlledMario)
 	{
-		ControlledMario->Move(Value);
+		ControlledMario->Move(MovementValue);
 	}
 }
 

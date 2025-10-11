@@ -1,9 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #include "Mario.h"
+
+#include <functional>
+
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "TimerManager.h"
+
 
 // Sets default values
 AMario::AMario()
@@ -11,23 +15,16 @@ AMario::AMario()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Настройка компонента движения
-	GetCharacterMovement()->bOrientRotationToMovement = false;
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.0f, 0.0f);
-	GetCharacterMovement()->JumpZVelocity = 600.f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 400.0f;
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.0f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2000.0f;
-
 	// Инициализация параметров движения
-	MovementParams.WalkSpeed = 400.0f;
-	MovementParams.SprintSpeed = 700.0f;
-	MovementParams.DashSpeed = 1500.0f;
+	MovementParams.WalkSpeed = 2000.0f;
+	MovementParams.SprintSpeed = 4000.0f;
+	MovementParams.DashSpeed = 15000.0f;
 	MovementParams.DashDuration = 0.2f;
 	MovementParams.DashCooldown = 1.0f;
-	MovementParams.JumpZVelocity = 600.0f;
-	MovementParams.DoubleJumpZVelocity = 500.0f;
+	MovementParams.JumpZVelocity = 6000.0f;
+	MovementParams.DoubleJumpZVelocity = 5000.0f;
+
+
 
 	// Инициализация структуры состояния персонажа
 	CharacterState = FCharacterState();
@@ -69,75 +66,102 @@ void AMario::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 void AMario::Landed(const FHitResult& Hit)
 {
 	Super::Landed(Hit);
-
-	// Восстановление доступных прыжков при приземлении
-	CharacterState.AvailableJumps = CharacterState.MaxJumps;
 }
 
 // ===== Функции обработки ввода =====
 
-void AMario::Move(const FInputActionValue& Value)
+void AMario::Move(const float Value)
 {
-	// Если персонаж мёртв или в дэше, не позволяем движение
-	if (CharacterState.CurrentState == EStateOfCharacter::Dead || CharacterState.bIsDashing)
+    auto moveFunc = std::function<void(float)>([this](float MovementValue)
+    {
+		if (Controller && MovementValue != 0.0f)
+		{
+			// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
+			GetCharacterMovement()->AddInputVector(FVector::LeftVector * MovementValue * MovementParams.WalkSpeed);
+			// Поворот персонажа в направлении движения через скелетную компоненту
+			if (MovementValue > 0.0f)
+			{
+				bIsDPressed = true;
+				if (GetMesh())
+				{
+					GetMesh()->SetRelativeRotation(FRotator(0.0f, 00.0f, 0.0f));
+				}
+			}
+			else if (MovementValue < 0.0f)
+			{
+				bIsAPressed = true;
+				if (GetMesh())
+				{
+					GetMesh()->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
+				}
+			}
+		}
+    });
+
+	switch (CharacterState.CurrentState)
 	{
-		return;
+		case EStateOfCharacter::Idle:
+			moveFunc(Value);
+		break;
+		case EStateOfCharacter::Jumping:
+			moveFunc(Value);
+			break;
+		case EStateOfCharacter::DoubleJumping:
+			moveFunc(Value);
+			break;
+		default:
+			break;
 	}
 
-	// Получение значения ввода (для 2D движения)
-	float MovementValue = Value.Get<float>();
-
-	if (Controller && MovementValue != 0.0f)
+	switch (CharacterState.CurrentState)
 	{
-		// Определение направления движения (вправо/влево)
-		const FRotator Rotation = Controller->GetControlRotation();
-		const FRotator YawRotation(0, Rotation.Yaw, 0);
-
-		// Получение вектора направления (вправо)
-		const FVector Direction = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-
-		// Добавление движения
-		AddMovementInput(Direction, MovementValue);
-
-		// Поворот персонажа в направлении движения
-		if (MovementValue > 0.0f)
-		{
-			SetActorRotation(FRotator(0.0f, 90.0f, 0.0f));
-		}
-		else if (MovementValue < 0.0f)
-		{
-			SetActorRotation(FRotator(0.0f, -90.0f, 0.0f));
-		}
+		case EStateOfCharacter::Idle:
+            break;
+		case EStateOfCharacter::Walking:
+			break;
+		case EStateOfCharacter::Running:
+			break;
+		case EStateOfCharacter::Jumping:
+			break;
+		case EStateOfCharacter::DoubleJumping:
+			break;
+		case EStateOfCharacter::Dead:
+			break;
+		case EStateOfCharacter::Dashing:
+			break;
+		default:
+			break;
 	}
+
 }
 
 void AMario::Jump()
 {
-	// Проверка на смерть
-	if (CharacterState.CurrentState == EStateOfCharacter::Dead)
+	auto jumpfunc = std::function<void()>([this]()
 	{
-		return;
-	}
-
-	// Проверка доступности прыжков
-	if (CharacterState.AvailableJumps > 0)
+		GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
+		GetCharacterMovement()->DoJump(false);
+		CharacterState.CurrentState = EStateOfCharacter::Jumping;
+	});
+	
+	switch (CharacterState.CurrentState)
 	{
-		// Первый прыжок (с земли)
-		if (CharacterState.AvailableJumps == CharacterState.MaxJumps)
-		{
-			Super::Jump();
-			GetCharacterMovement()->JumpZVelocity = MovementParams.JumpZVelocity;
-			CharacterState.CurrentState = EStateOfCharacter::Jumping;
-		}
-		// Второй прыжок (двойной прыжок)
-		else if (CharacterState.AvailableJumps == 1)
-		{
-			LaunchCharacter(FVector(0, 0, MovementParams.DoubleJumpZVelocity), false, true);
+		case EStateOfCharacter::Idle:
+			jumpfunc();
+            break;
+		case EStateOfCharacter::Walking:
+			jumpfunc();
+			break;
+		case EStateOfCharacter::Running:
+			jumpfunc();
+			break;
+		case EStateOfCharacter::Jumping:
+			jumpfunc();
 			CharacterState.CurrentState = EStateOfCharacter::DoubleJumping;
-		}
-
-		CharacterState.AvailableJumps--;
-		CharacterState.LastJumpTime = GetWorld()->GetTimeSeconds();
+			break;
+		default:
+			break;
 	}
 }
 
@@ -148,12 +172,15 @@ void AMario::StopJumping()
 
 void AMario::StartSprint()
 {
-	if (CharacterState.CurrentState != EStateOfCharacter::Dead && !CharacterState.bIsDashing)
+	switch (CharacterState.CurrentState)
 	{
-		CharacterState.CurrentState = EStateOfCharacter::Running;
-		GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
-	}
-}
+		case EStateOfCharacter::Walking:
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
+			CharacterState.CurrentState = EStateOfCharacter::Running;
+			break;
+		default:
+			break;
+	}}
 
 void AMario::StopSprint()
 {
@@ -229,7 +256,6 @@ void AMario::TriggerDeath()
 			EnableInput(Cast<APlayerController>(Controller));
 			GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::QueryAndPhysics);
 			GetCharacterMovement()->SetMovementMode(MOVE_Walking);
-			CharacterState.AvailableJumps = CharacterState.MaxJumps;
 		}
 		else
 		{
@@ -254,14 +280,6 @@ void AMario::UpdateCharacterState()
 	// Проверка, находится ли персонаж в воздухе
 	if (GetCharacterMovement()->IsFalling())
 	{
-		if (CharacterState.AvailableJumps == CharacterState.MaxJumps - 1)
-		{
-			CharacterState.CurrentState = EStateOfCharacter::Jumping;
-		}
-		else if (CharacterState.AvailableJumps < CharacterState.MaxJumps - 1)
-		{
-			CharacterState.CurrentState = EStateOfCharacter::DoubleJumping;
-		}
 	}
 	else
 	{

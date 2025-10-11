@@ -35,18 +35,14 @@ struct FCharacterState
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
 	EStateOfCharacter CurrentState;
 
-	// Количество доступных прыжков
+	// Флаг для проверки, нажата ли клавиша движения D
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
-	int AvailableJumps;
+	bool bIsDPressed;
 
-	// Максимальное количество прыжков
+	// Флаг для проверки, нажата ли клавиша движения A
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
-	int MaxJumps;
-
-	// Время последнего прыжка
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
-	float LastJumpTime;
-
+	bool bIsAPressed;
+	
 	// Время последнего дэша
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
 	float LastDashTime;
@@ -63,9 +59,8 @@ struct FCharacterState
 	FCharacterState()
 		: Lives(3)
 		, CurrentState(EStateOfCharacter::Idle)
-		, AvailableJumps(2)
-		, MaxJumps(2)
-		, LastJumpTime(0.0f)
+		, bIsDPressed(false)
+		, bIsAPressed(false)
 		, LastDashTime(0.0f)
 		, bIsDashing(false)
 		, DashCooldownRemaining(0.0f)
@@ -128,7 +123,7 @@ public:
 public:
 	// ===== Функции обработки ввода (вызываются из PlayerController) =====
 	
-	void Move(const FInputActionValue& Value);
+	void Move(const float Value);
 	void Jump() override;
 	void StopJumping() override;
 	void StartSprint();
