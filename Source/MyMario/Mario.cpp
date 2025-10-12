@@ -189,7 +189,10 @@ void AMario::StopMove(const float Value)
 
 	auto stopMoveFunc = std::function<void(float)>([this](float MovementValue)
     {
-		GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
+		if (!CharacterState.SprintPressed)
+		{
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
+		}
 	
 		if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 		{
@@ -269,6 +272,7 @@ void AMario::StopJumping()
 
 void AMario::StartSprint()
 {
+	CharacterState.SprintPressed = true;
 	switch (CharacterState.CurrentState)
 	{
 		case EStateOfCharacter::Idle:
@@ -281,7 +285,6 @@ void AMario::StartSprint()
 		default:
 			break;
 	}
-	CharacterState.SprintPressed = true;
 }
 
 void AMario::StopSprint()
@@ -297,6 +300,7 @@ void AMario::StopSprint()
 			GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
 			break;
 		case EStateOfCharacter::Running:
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
 			if(CharacterState.bIsDPressed || CharacterState.bIsAPressed)
 			{
 				CharacterState.CurrentState = EStateOfCharacter::Walking;
