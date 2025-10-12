@@ -47,11 +47,20 @@ void AMyPlayerController::SetupInputComponent()
 	// Привязка Enhanced Input Actions
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-		// Движение (A/D)
-		if (MoveAction)
+		// Движение вправо (D)
+		if (MoveRightAction)
 		{
-			EnhancedInputComponent->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AMyPlayerController::HandleMove);
-			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: MoveAction привязан"));
+			EnhancedInputComponent->BindAction(MoveRightAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleMoveRightStarted);
+			EnhancedInputComponent->BindAction(MoveRightAction, ETriggerEvent::Completed, this, &AMyPlayerController::HandleMoveRightCompleted);
+			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: MoveRightAction привязан"));
+		}
+
+		// Движение влево (A)
+		if (MoveLeftAction)
+		{
+			EnhancedInputComponent->BindAction(MoveLeftAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleMoveLeftStarted);
+			EnhancedInputComponent->BindAction(MoveLeftAction, ETriggerEvent::Completed, this, &AMyPlayerController::HandleMoveLeftCompleted);
+			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: MoveLeftAction привязан"));
 		}
 
 		// Прыжок (Space)
@@ -66,7 +75,7 @@ void AMyPlayerController::SetupInputComponent()
 		{
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleSprintStarted);
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Completed, this, &AMyPlayerController::HandleSprintCompleted);
-			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: SprintAction привязан"));
+			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: SprintAction привязан с Started и Completed"));
 		}
 
 		// Дэш (Ctrl)
@@ -87,19 +96,43 @@ void AMyPlayerController::SetupInputComponent()
 
 // ===== Функции обработки ввода с логированием =====
 
-void AMyPlayerController::HandleMove(const FInputActionValue& Value)
+void AMyPlayerController::HandleMoveRightStarted()
 {
-	float MovementValue = Value.Get<float>();
-	
-	// Логируем только ненулевые значения, чтобы не засорять лог
-	if (FMath::Abs(MovementValue) > 0.01f)
-	{
-		UE_LOG(LogTemp, Verbose, TEXT("MyPlayerController: Move Input = %.2f"), MovementValue);
-	}
+	UE_LOG(LogTemp, Log, TEXT("MyPlayerController: Move Right (D) Started"));
 
 	if (ControlledMario)
 	{
-		ControlledMario->Move(MovementValue);
+		ControlledMario->Move(1.0f);
+	}
+}
+
+void AMyPlayerController::HandleMoveRightCompleted()
+{
+	UE_LOG(LogTemp, Log, TEXT("MyPlayerController: Move Right (D) Completed"));
+
+	if (ControlledMario)
+	{
+		ControlledMario->StopMove(1.0f);
+	}
+}
+
+void AMyPlayerController::HandleMoveLeftStarted()
+{
+	UE_LOG(LogTemp, Log, TEXT("MyPlayerController: Move Left (A) Started"));
+
+	if (ControlledMario)
+	{
+		ControlledMario->Move(-1.0f);
+	}
+}
+
+void AMyPlayerController::HandleMoveLeftCompleted()
+{
+	UE_LOG(LogTemp, Log, TEXT("MyPlayerController: Move Left (A) Completed"));
+
+	if (ControlledMario)
+	{
+		ControlledMario->StopMove(-1.0f);
 	}
 }
 

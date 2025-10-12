@@ -43,6 +43,10 @@ struct FCharacterState
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
 	bool bIsAPressed;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
+	bool SprintPressed;
+
+	
 	// Время последнего дэша
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
 	float LastDashTime;
@@ -61,6 +65,7 @@ struct FCharacterState
 		, CurrentState(EStateOfCharacter::Idle)
 		, bIsDPressed(false)
 		, bIsAPressed(false)
+		, SprintPressed(false)
 		, LastDashTime(0.0f)
 		, bIsDashing(false)
 		, DashCooldownRemaining(0.0f)
@@ -80,6 +85,7 @@ struct FMovementParameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float SprintSpeed = 700.0f;
 
+	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float DashSpeed = 1500.0f;
 
@@ -124,6 +130,7 @@ public:
 	// ===== Функции обработки ввода (вызываются из PlayerController) =====
 	
 	void Move(const float Value);
+	void StopMove(const float Value);
 	void Jump() override;
 	void StopJumping() override;
 	void StartSprint();
@@ -144,8 +151,5 @@ public:
 private:
 	// Функция для завершения дэша
 	void EndDash();
-
-	// Функция для обновления состояния персонажа
-	void UpdateCharacterState();
 };
 

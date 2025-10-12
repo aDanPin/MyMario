@@ -31,7 +31,10 @@ public:
 
 	// Input Actions
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* MoveAction;
+	class UInputAction* MoveRightAction; // D key
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* MoveLeftAction; // A key
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputAction* JumpAction;
@@ -48,7 +51,10 @@ public:
 private:
 	// ===== Функции обработки ввода =====
 	
-	void HandleMove(const FInputActionValue& Value);
+	void HandleMoveRightStarted();
+	void HandleMoveRightCompleted();
+	void HandleMoveLeftStarted();
+	void HandleMoveLeftCompleted();
 	void HandleJumpStarted();
 	void HandleJumpCompleted();
 	void HandleSprintStarted();
