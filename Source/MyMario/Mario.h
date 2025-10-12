@@ -132,7 +132,6 @@ public:
 	void Move(const float Value);
 	void StopMove(const float Value);
 	void Jump() override;
-	void StopJumping() override;
 	void StartSprint();
 	void StopSprint();
 	void PerformDash();

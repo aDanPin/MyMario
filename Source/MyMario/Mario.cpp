@@ -96,11 +96,6 @@ void AMario::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 	// Эта функция оставлена для совместимости
 }
 
-void AMario::Landed(const FHitResult& Hit)
-{
-	Super::Landed(Hit);
-}
-
 // ===== Функции обработки ввода =====
 
 void AMario::Move(const float Value)
@@ -265,9 +260,25 @@ void AMario::Jump()
 	}
 }
 
-void AMario::StopJumping()
+void AMario::Landed(const FHitResult& Hit)
 {
-	Super::StopJumping();
+    Super::Landed(Hit);
+
+	if (CharacterState.CurrentState == EStateOfCharacter::DoubleJumping)
+	{
+		if (!CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+		{
+			CharacterState.CurrentState = EStateOfCharacter::Idle;
+		}
+		else if (CharacterState.SprintPressed)
+		{
+			CharacterState.CurrentState = EStateOfCharacter::Running;
+		}
+		else // if CharacterState.IsDPressed || CharacterState.IsAPressed
+		{
+			CharacterState.CurrentState = EStateOfCharacter::Walking;
+		}
+	}
 }
 
 void AMario::StartSprint()
@@ -276,11 +287,17 @@ void AMario::StartSprint()
 	switch (CharacterState.CurrentState)
 	{
 		case EStateOfCharacter::Idle:
-			GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
 		break;
 		case EStateOfCharacter::Walking:
 			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
 			CharacterState.CurrentState = EStateOfCharacter::Running;
+			break;
+		case EStateOfCharacter::Jumping:
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
+			break;
+		case EStateOfCharacter::DoubleJumping:
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
 			break;
 		default:
 			break;
