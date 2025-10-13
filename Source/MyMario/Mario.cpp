@@ -21,6 +21,8 @@ AMario::AMario()
 	MovementParams.DashSpeed = 3000.0f;
 	MovementParams.DashDuration = 0.2f;
 	MovementParams.DashCooldown = 1.0f;
+	MovementParams.DamageVerticalVelocity = 600.0f;
+	MovementParams.DamageHorizontalVelocity = 200.0f;
 	MovementParams.JumpZVelocity = 6000.0f;
 	MovementParams.DoubleJumpZVelocity = 5000.0f;
 
@@ -53,7 +55,8 @@ void AMario::Tick(float DeltaTime)
 		case EStateOfCharacter::Running:
 		case EStateOfCharacter::Jumping:
 		case EStateOfCharacter::DoubleJumping:
-			// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
+		case EStateOfCharacter::Dashing:
+		// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
 			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 			{
 				InputVector = FVector::LeftVector;
@@ -75,7 +78,8 @@ void AMario::Tick(float DeltaTime)
 				GetCharacterMovement()->AddInputVector(InputVector * MovementParams.WalkSpeed);
 			}
 			break;
-		case EStateOfCharacter::Dashing:
+		case EStateOfCharacter::Damage:
+			// Во время урона нельзя применять никакую силу
 			break;
 		default:
 			break;
@@ -139,6 +143,9 @@ void AMario::Move(const float Value)
 			break;
 		case EStateOfCharacter::DoubleJumping:
 			moveFunc(Value);
+			break;
+		case EStateOfCharacter::Damage:
+			// Во время урона движение заблокировано
 			break;
 		default:
 			break;
@@ -267,6 +274,9 @@ void AMario::Jump()
 			jumpfunc();
 			CharacterState.CurrentState = EStateOfCharacter::DoubleJumping;
 			break;
+		case EStateOfCharacter::Damage:
+			// Во время урона прыжок заблокирован
+			break;
 		default:
 			break;
 	}
@@ -310,6 +320,9 @@ void AMario::StartSprint()
 			break;
 		case EStateOfCharacter::DoubleJumping:
 			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
+			break;
+		case EStateOfCharacter::Damage:
+			// Во время урона бег заблокирован
 			break;
 		default:
 			break;
@@ -384,6 +397,9 @@ void AMario::StartDash()
 				false
 			);
 			break;
+		case EStateOfCharacter::Damage:
+			// Во время урона дэш заблокирован
+			break;
 		default:
 			break;
 	}	
@@ -402,6 +418,89 @@ void AMario::EndDash()
 	else // if CharacterState.IsDPressed || CharacterState.IsAPressed
 	{
 		CharacterState.CurrentState = EStateOfCharacter::Walking;
+	}
+}
+
+void AMario::TriggerDamage()
+{
+	UMaterialInstanceDynamic* DynMat = nullptr;
+
+	switch (CharacterState.CurrentState)
+	{
+		case EStateOfCharacter::Idle:
+		case EStateOfCharacter::Walking:
+		case EStateOfCharacter::Running:
+		case EStateOfCharacter::Jumping:
+		case EStateOfCharacter::DoubleJumping:
+					// Проверяем, не находится ли уже персонаж в состоянии урона или неуязвимости
+			if (CharacterState.CurrentState == EStateOfCharacter::Damage || 
+				CharacterState.CurrentState == EStateOfCharacter::Dead)
+			{
+				return;
+			}
+
+			// Переходим в состояние урона
+			CharacterState.CurrentState = EStateOfCharacter::Damage;
+
+			// Останавливаем персонажа - убираем все силы
+			GetCharacterMovement()->StopMovementImmediately();
+			GetCharacterMovement()->Velocity = FVector::ZeroVector;
+
+			if (CharacterState.bLastDirectionRight)
+			{
+				LaunchCharacter(FVector(0.0f, MovementParams.DamageHorizontalVelocity, MovementParams.DamageVerticalVelocity) , true, true);
+			}
+			else
+			{
+				LaunchCharacter(FVector(0.0f, -MovementParams.DamageHorizontalVelocity, MovementParams.DamageVerticalVelocity), true, true);
+			}
+			
+			
+			// Сделать персонажа красным
+			if (GetMesh())
+			{
+				int32 NumMaterials = GetMesh()->GetNumMaterials();
+				for (int32 i = 0; i < NumMaterials; ++i)
+				{
+					DynMat = GetMesh()->CreateAndSetMaterialInstanceDynamic(i);
+					if (DynMat)
+					{
+						DynMat->SetVectorParameterValue(TEXT("BodyColor"), FLinearColor::Red);
+					}
+				}
+			}
+
+
+			GetWorldTimerManager().SetTimer(
+				_damageTimerHandle,
+				this,
+				&AMario::EndDamage,
+				CharacterState.DamageImmunityDuration,
+				false
+			);
+
+
+		default:
+			break;
+	}
+}
+
+void AMario::EndDamage()
+{
+	CharacterState.CurrentState = EStateOfCharacter::Idle;
+
+	UMaterialInstanceDynamic* DynMat = nullptr;
+	if (GetMesh())
+	{
+		int32 NumMaterials = GetMesh()->GetNumMaterials();
+		for (int32 i = 0; i < NumMaterials; ++i)
+		{
+			DynMat = GetMesh()->CreateAndSetMaterialInstanceDynamic(i);
+			if (DynMat)
+			{
+				DynMat->SetVectorParameterValue(TEXT("BodyColor"), FLinearColor::White);
+			}
+		}
 	}
 }
 
@@ -446,43 +545,56 @@ void AMario::UpdateAnimationVariables()
 		case EStateOfCharacter::Idle:
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
 			break;
 			
 		case EStateOfCharacter::Walking:
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
 			break;
 			
 		case EStateOfCharacter::Running:
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
 			break;
 			
 		case EStateOfCharacter::Jumping:
 			AnimationVars.bIsFalling = Velocity.Z < 0.0f;
 			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
 			break;
 			
 		case EStateOfCharacter::DoubleJumping:
 			AnimationVars.bIsFalling = Velocity.Z < 0.0f;
 			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
 			break;
 			
 		case EStateOfCharacter::Falling:
 			AnimationVars.bIsFalling = true;
 			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
 			break;
 			
 		case EStateOfCharacter::Dashing:
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = true;
+			AnimationVars.bIsDamaged = false;
 			break;
 			
+		case EStateOfCharacter::Damage:
+			AnimationVars.bIsFalling = false;
+			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = true;
+			break;
 			
 		case EStateOfCharacter::Dead:
 			AnimationVars.bIsDead = true;
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
 			break;
 			
 		default:

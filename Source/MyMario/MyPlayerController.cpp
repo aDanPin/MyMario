@@ -192,7 +192,7 @@ void AMyPlayerController::HandleDeath()
 
 	if (ControlledMario)
 	{
-		ControlledMario->TriggerDeath();
+		ControlledMario->TriggerDamage();
 	}
 }
 

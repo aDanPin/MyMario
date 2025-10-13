@@ -18,6 +18,7 @@ enum class EStateOfCharacter : uint8
 	DoubleJumping UMETA(DisplayName = "DoubleJumping"),
 	Falling UMETA(DisplayName = "Falling"),
 	Dashing UMETA(DisplayName = "Dashing"),
+	Damage UMETA(DisplayName = "Damage"),
 	Dead UMETA(DisplayName = "Dead")
 };
 
@@ -61,6 +62,16 @@ struct FCharacterState
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
 	bool bLastDirectionRight;
+
+	// Длительность неуязвимости при получении урона
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
+	float DamageImmunityDuration;
+
+	// Время начала состояния урона
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
+	float DamageStartTime;
+
+
 	// Конструктор по умолчанию
 	FCharacterState()
 		: Lives(3)
@@ -72,6 +83,8 @@ struct FCharacterState
 		, bIsDashing(false)
 		, DashCooldownRemaining(0.0f)
 		, bLastDirectionRight(true)
+		, DamageImmunityDuration(1.0f)
+		, DamageStartTime(0.0f)
 	{
 	}
 };
@@ -97,6 +110,12 @@ struct FMovementParameters
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float DashCooldown = 1.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float DamageVerticalVelocity = 600.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float DamageHorizontalVelocity = 200.0f;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float JumpZVelocity = 600.0f;
@@ -132,6 +151,10 @@ struct FAnimationVariables
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsDashing = false;
 
+	// Получает ли персонаж урон
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsDamaged = false;
+
 	// Мертв ли персонаж
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsDead = false;
@@ -143,6 +166,7 @@ struct FAnimationVariables
 		, bIsInAir(false)
 		, bIsFalling(false)
 		, bIsDashing(false)
+		, bIsDamaged(false)
 		, bIsDead(false)
 	{
 	}
@@ -181,6 +205,10 @@ public:
 	void StartSprint();
 	void StopSprint();
 	void StartDash();
+	
+	UFUNCTION(BlueprintCallable, Category = "Character")
+	void TriggerDamage();
+	
 	void TriggerDeath();
 
 	// ===== Состояние персонажа =====
@@ -216,14 +244,21 @@ public:
 	FORCEINLINE bool GetIsDashing() const { return AnimationVars.bIsDashing; }
 	
 	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE bool GetIsDamaged() const { return AnimationVars.bIsDamaged; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Animation")
 	FORCEINLINE bool GetIsDead() const { return AnimationVars.bIsDead; }
 
 private:
     FTimerHandle _dashTimerHandle;
+	FTimerHandle _damageTimerHandle;
 
 	
 	// Функция для завершения дэша
 	void EndDash();
+	
+	// Функция для завершения состояния урона
+	void EndDamage();
 	
 	// Функция обновления переменных для анимации
 	void UpdateAnimationVariables();
