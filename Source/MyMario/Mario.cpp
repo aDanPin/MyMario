@@ -28,6 +28,7 @@ AMario::AMario()
 
 	// Инициализация структуры состояния персонажа
 	CharacterState = FCharacterState();
+
 }
 
 // Called when the game starts or when spawned
@@ -37,6 +38,7 @@ void AMario::BeginPlay()
 	
 	// Установка начальной скорости ходьбы
 	GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
+	GetCharacterMovement()->JumpZVelocity = MovementParams.JumpZVelocity;
 }
 
 // Called every frame
@@ -55,19 +57,18 @@ void AMario::Tick(float DeltaTime)
 		case EStateOfCharacter::Running:
 		case EStateOfCharacter::Jumping:
 		case EStateOfCharacter::DoubleJumping:
-		case EStateOfCharacter::Dashing:
 		// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
-			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
-			{
-				InputVector = FVector::LeftVector;
-			}
-			else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
-			{
-				InputVector = FVector::RightVector;
-			}
-			else
-			{
-				InputVector = FVector::ZeroVector;
+		if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+		{
+			InputVector = FVector::LeftVector;
+		}
+		else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
+		{
+			InputVector = FVector::RightVector;
+		}
+		else
+		{
+			InputVector = FVector::ZeroVector;
 			}
 
 			if(CharacterState.SprintPressed)
@@ -77,6 +78,8 @@ void AMario::Tick(float DeltaTime)
 			{
 				GetCharacterMovement()->AddInputVector(InputVector * MovementParams.WalkSpeed);
 			}
+			break;
+		case EStateOfCharacter::Dashing:
 			break;
 		case EStateOfCharacter::Damage:
 			// Во время урона нельзя применять никакую силу
@@ -380,6 +383,8 @@ void AMario::StartDash()
 		case EStateOfCharacter::DoubleJumping:
 			CharacterState.CurrentState = EStateOfCharacter::Dashing;
 
+			GetCharacterMovement()->GroundFriction = 0.f;
+
 			if (CharacterState.bLastDirectionRight)
 			{
 				LaunchCharacter(FVector(0.0f, -MovementParams.DashSpeed, 0.0f) , true, true);
@@ -407,6 +412,7 @@ void AMario::StartDash()
 
 void AMario::EndDash()
 {
+	GetCharacterMovement()->GroundFriction = 1.f;
 	if (!CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 	{
 		CharacterState.CurrentState = EStateOfCharacter::Idle;

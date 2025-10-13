@@ -249,6 +249,17 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	FORCEINLINE bool GetIsDead() const { return AnimationVars.bIsDead; }
 
+	// ===== Геттеры для параметров движения =====
+	
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	FORCEINLINE float GetWalkSpeed() const { return MovementParams.WalkSpeed; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	FORCEINLINE float GetSprintSpeed() const { return MovementParams.SprintSpeed; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Movement")
+	FORCEINLINE float GetDashSpeed() const { return MovementParams.DashSpeed; }
+
 private:
     FTimerHandle _dashTimerHandle;
 	FTimerHandle _damageTimerHandle;
