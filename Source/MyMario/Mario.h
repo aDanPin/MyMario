@@ -103,6 +103,49 @@ struct FMovementParameters
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float DoubleJumpZVelocity = 500.0f;
+
+};
+
+// Структура для переменных анимации
+USTRUCT(BlueprintType)
+struct FAnimationVariables
+{
+	GENERATED_BODY()
+
+	// Скорость персонажа (для blend spaces)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	float Speed = 0.0f;
+
+	// Направление движения (-1 влево, 0 стоп, 1 вправо)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	float Direction = 0.0f;
+
+	// Находится ли персонаж в воздухе
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsInAir = false;
+
+	// Находится ли персонаж в состоянии падения
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsFalling = false;
+
+	// Выполняет ли персонаж дэш
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsDashing = false;
+
+	// Мертв ли персонаж
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsDead = false;
+
+	// Конструктор по умолчанию
+	FAnimationVariables()
+		: Speed(0.0f)
+		, Direction(0.0f)
+		, bIsInAir(false)
+		, bIsFalling(false)
+		, bIsDashing(false)
+		, bIsDead(false)
+	{
+	}
 };
 
 
@@ -150,9 +193,39 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	FMovementParameters MovementParams;
 
+	// ===== Переменные анимации =====
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	FAnimationVariables AnimationVars;
+
+	// ===== Геттеры для переменных анимации =====
+	
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE float GetSpeed() const { return AnimationVars.Speed; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE float GetDirection() const { return AnimationVars.Direction; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE bool GetIsInAir() const { return AnimationVars.bIsInAir; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE bool GetIsFalling() const { return AnimationVars.bIsFalling; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE bool GetIsDashing() const { return AnimationVars.bIsDashing; }
+	
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE bool GetIsDead() const { return AnimationVars.bIsDead; }
+
 private:
-    FTimerHandle _timerHandle;
+    FTimerHandle _dashTimerHandle;
+
+	
 	// Функция для завершения дэша
 	void EndDash();
+	
+	// Функция обновления переменных для анимации
+	void UpdateAnimationVariables();
 };
 

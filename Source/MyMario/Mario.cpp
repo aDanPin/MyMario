@@ -16,8 +16,8 @@ AMario::AMario()
 	PrimaryActorTick.bCanEverTick = true;
 
 	// Инициализация параметров движения
-	MovementParams.WalkSpeed = 500.0f;
-	MovementParams.SprintSpeed = 1500.0f;
+	MovementParams.WalkSpeed = 400.0f;
+	MovementParams.SprintSpeed = 1000.0f;
 	MovementParams.DashSpeed = 3000.0f;
 	MovementParams.DashDuration = 0.2f;
 	MovementParams.DashCooldown = 1.0f;
@@ -42,6 +42,9 @@ void AMario::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	// updateCharacterState(DeltaTime);
+	
+	// Обновляем переменные для анимации
+	UpdateAnimationVariables();
 	
 	FVector InputVector = FVector::ZeroVector;
 	switch (CharacterState.CurrentState)
@@ -374,10 +377,10 @@ void AMario::StartDash()
 			}
 
 			GetWorldTimerManager().SetTimer(
-				_timerHandle,
+				_dashTimerHandle,
 				this,
 				&AMario::EndDash,
-				0.5f,
+				MovementParams.DashDuration,
 				false
 			);
 			break;
@@ -404,5 +407,86 @@ void AMario::EndDash()
 
 void AMario::TriggerDeath()
 {
+}
+
+void AMario::UpdateAnimationVariables()
+{
+	if (!GetCharacterMovement())
+	{
+		return;
+	}
+
+	// Получаем текущую скорость персонажа
+	FVector Velocity = GetVelocity();
+	
+	// Вычисляем горизонтальную скорость (2D)
+	FVector HorizontalVelocity2D = FVector(Velocity.X, Velocity.Y, 0.0f);
+	AnimationVars.Speed = HorizontalVelocity2D.Size();
+	
+	// Определяем направление движения
+	if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+	{
+		AnimationVars.Direction = 1.0f; // Вправо
+	}
+	else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
+	{
+		AnimationVars.Direction = -1.0f; // Влево
+	}
+	else
+	{
+		AnimationVars.Direction = 0.0f; // Не движется
+	}
+	
+	// Проверка, находится ли персонаж в воздухе
+	AnimationVars.bIsInAir = GetCharacterMovement()->IsFalling();
+	
+	// Обновление состояний анимации на основе текущего состояния персонажа
+	switch (CharacterState.CurrentState)
+	{
+		case EStateOfCharacter::Idle:
+			AnimationVars.bIsFalling = false;
+			AnimationVars.bIsDashing = false;
+			break;
+			
+		case EStateOfCharacter::Walking:
+			AnimationVars.bIsFalling = false;
+			AnimationVars.bIsDashing = false;
+			break;
+			
+		case EStateOfCharacter::Running:
+			AnimationVars.bIsFalling = false;
+			AnimationVars.bIsDashing = false;
+			break;
+			
+		case EStateOfCharacter::Jumping:
+			AnimationVars.bIsFalling = Velocity.Z < 0.0f;
+			AnimationVars.bIsDashing = false;
+			break;
+			
+		case EStateOfCharacter::DoubleJumping:
+			AnimationVars.bIsFalling = Velocity.Z < 0.0f;
+			AnimationVars.bIsDashing = false;
+			break;
+			
+		case EStateOfCharacter::Falling:
+			AnimationVars.bIsFalling = true;
+			AnimationVars.bIsDashing = false;
+			break;
+			
+		case EStateOfCharacter::Dashing:
+			AnimationVars.bIsFalling = false;
+			AnimationVars.bIsDashing = true;
+			break;
+			
+			
+		case EStateOfCharacter::Dead:
+			AnimationVars.bIsDead = true;
+			AnimationVars.bIsFalling = false;
+			AnimationVars.bIsDashing = false;
+			break;
+			
+		default:
+			break;
+	}
 }
 
