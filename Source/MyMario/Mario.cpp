@@ -73,14 +73,6 @@ void AMario::Tick(float DeltaTime)
 			}
 			break;
 		case EStateOfCharacter::Dashing:
-			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
-			{
-				GetCharacterMovement()->AddInputVector(FVector::LeftVector * MovementParams.DashSpeed);
-			}
-			else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
-			{
-				GetCharacterMovement()->AddInputVector(FVector::RightVector * MovementParams.DashSpeed);
-			}
 			break;
 		default:
 			break;
@@ -180,6 +172,23 @@ void AMario::StopMove(const float Value)
 	else if (Value < 0.0f)
 	{
 		CharacterState.bIsAPressed = false;
+	}
+
+	if(CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+	{
+		CharacterState.bLastDirectionRight = true;
+	}
+	else if(CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
+	{
+		CharacterState.bLastDirectionRight = false;
+	}
+	else if( Value == 1.0f)
+	{
+		CharacterState.bLastDirectionRight = true;
+	}
+	else if ( Value == -1.0f)
+	{
+		CharacterState.bLastDirectionRight = false;
 	}
 
 	auto stopMoveFunc = std::function<void(float)>([this](float MovementValue)
@@ -340,12 +349,57 @@ void AMario::StopSprint()
 	}
 }
 
-void AMario::PerformDash()
+void AMario::StartDash()
 {
+	std::function<void()> dashFunc = [this]()
+	{
+	};
+
+	switch (CharacterState.CurrentState)
+	{
+		case EStateOfCharacter::Idle:
+		case EStateOfCharacter::Walking:
+		case EStateOfCharacter::Running:
+		case EStateOfCharacter::Jumping:
+		case EStateOfCharacter::DoubleJumping:
+			CharacterState.CurrentState = EStateOfCharacter::Dashing;
+
+			if (CharacterState.bLastDirectionRight)
+			{
+				LaunchCharacter(FVector(0.0f, -MovementParams.DashSpeed, 0.0f) , true, true);
+			}
+			else
+			{
+				LaunchCharacter(FVector(0.0f, MovementParams.DashSpeed, 0.0f), true, true);
+			}
+
+			GetWorldTimerManager().SetTimer(
+				_timerHandle,
+				this,
+				&AMario::EndDash,
+				0.5f,
+				false
+			);
+			break;
+		default:
+			break;
+	}	
 }
 
 void AMario::EndDash()
 {
+	if (!CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Idle;
+	}
+	else if (CharacterState.SprintPressed)
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Running;
+	}
+	else // if CharacterState.IsDPressed || CharacterState.IsAPressed
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Walking;
+	}
 }
 
 void AMario::TriggerDeath()

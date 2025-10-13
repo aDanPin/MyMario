@@ -182,7 +182,7 @@ void AMyPlayerController::HandleDash()
 
 	if (ControlledMario)
 	{
-		ControlledMario->PerformDash();
+		ControlledMario->StartDash();
 	}
 }
 

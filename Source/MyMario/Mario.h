@@ -59,6 +59,8 @@ struct FCharacterState
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
 	float DashCooldownRemaining;
 	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
+	bool bLastDirectionRight;
 	// Конструктор по умолчанию
 	FCharacterState()
 		: Lives(3)
@@ -69,6 +71,7 @@ struct FCharacterState
 		, LastDashTime(0.0f)
 		, bIsDashing(false)
 		, DashCooldownRemaining(0.0f)
+		, bLastDirectionRight(true)
 	{
 	}
 };
@@ -134,7 +137,7 @@ public:
 	void Jump() override;
 	void StartSprint();
 	void StopSprint();
-	void PerformDash();
+	void StartDash();
 	void TriggerDeath();
 
 	// ===== Состояние персонажа =====
@@ -148,6 +151,7 @@ public:
 	FMovementParameters MovementParams;
 
 private:
+    FTimerHandle _timerHandle;
 	// Функция для завершения дэша
 	void EndDash();
 };
