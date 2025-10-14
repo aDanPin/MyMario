@@ -306,7 +306,10 @@ void AMario::Landed(const FHitResult& Hit)
 {
     Super::Landed(Hit);
 
-	if (CharacterState.CurrentState == EStateOfCharacter::DoubleJumping)
+	// Обрабатываем приземление для всех состояний в воздухе
+	if (CharacterState.CurrentState == EStateOfCharacter::Jumping ||
+	    CharacterState.CurrentState == EStateOfCharacter::DoubleJumping ||
+	    CharacterState.CurrentState == EStateOfCharacter::Falling)
 	{
 		if (!CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 		{
