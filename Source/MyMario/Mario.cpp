@@ -15,19 +15,11 @@ AMario::AMario()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-	// Инициализация параметров движения
-	MovementParams.WalkSpeed = 400.0f;
-	MovementParams.SprintSpeed = 1000.0f;
-	MovementParams.DashSpeed = 3000.0f;
-	MovementParams.DashDuration = 0.2f;
-	MovementParams.DashCooldown = 1.0f;
-	MovementParams.DamageVerticalVelocity = 600.0f;
-	MovementParams.DamageHorizontalVelocity = 200.0f;
-	MovementParams.JumpZVelocity = 6000.0f;
-	MovementParams.DoubleJumpZVelocity = 5000.0f;
-
 	// Инициализация структуры состояния персонажа
 	CharacterState = FCharacterState();
+
+	// Инициализация вектора движения мыши
+	MouseMovement = FVector2D::ZeroVector;
 
 }
 
@@ -80,6 +72,31 @@ void AMario::Tick(float DeltaTime)
 			}
 			break;
 		case EStateOfCharacter::Dashing:
+			break;
+		case EStateOfCharacter::Floating:
+			// Применяем движение на основе ввода мыши
+			if (MouseMovement.SizeSquared() > 0.0f)
+			{
+				FVector MovementDirection = FVector(MouseMovement.X, 0.0f, 0.0f);
+				MovementDirection.Normalize();
+
+				// перемещение по X и Y (например, по плоскости X-Y)
+				AddMovementInput(GetActorRightVector(), MouseMovement.X  * MovementParams.FloatingSpeed * DeltaTime);
+				AddMovementInput(GetActorUpVector(), MouseMovement.Y * MovementParams.FloatingSpeed * DeltaTime);
+
+				if (MouseMovement.X > 0.0f)
+				{
+					CharacterState.bLastDirectionRight = true;
+					GetMesh()->SetRelativeRotation(FRotator(0.0f, 00.0f, 0.0f));
+				}
+				else if (MouseMovement.X < 0.0f)
+				{
+					CharacterState.bLastDirectionRight = false;
+					GetMesh()->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
+				}
+				
+				MouseMovement = FVector2D::ZeroVector;
+			}
 			break;
 		case EStateOfCharacter::Damage:
 			// Во время урона нельзя применять никакую силу
@@ -370,10 +387,6 @@ void AMario::StopSprint()
 
 void AMario::StartDash()
 {
-	std::function<void()> dashFunc = [this]()
-	{
-	};
-
 	switch (CharacterState.CurrentState)
 	{
 		case EStateOfCharacter::Idle:
@@ -419,6 +432,7 @@ void AMario::EndDash()
 	}
 	else if (CharacterState.SprintPressed)
 	{
+		GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
 		CharacterState.CurrentState = EStateOfCharacter::Running;
 	}
 	else // if CharacterState.IsDPressed || CharacterState.IsAPressed
@@ -514,6 +528,86 @@ void AMario::TriggerDeath()
 {
 }
 
+void AMario::StartFloating()
+{
+	// Проверяем, доступен ли floating (не на кулдауне и не в состоянии урона/смерти)
+	if (GetWorld()->GetTimeSeconds() - CharacterState.FloatingStartTime  < CharacterState.FloatingCooldownRemaining)
+	{
+		return;
+	}
+
+	FVector CurrentVelocity = GetVelocity();
+
+	switch (CharacterState.CurrentState)
+	{
+		case EStateOfCharacter::Idle:
+		case EStateOfCharacter::Walking:
+		case EStateOfCharacter::Running:
+		case EStateOfCharacter::Jumping:
+		case EStateOfCharacter::DoubleJumping:
+		case EStateOfCharacter::Falling:
+			CharacterState.CurrentState = EStateOfCharacter::Floating;
+			CharacterState.bIsFloating = true;
+			CharacterState.FloatingStartTime = GetWorld()->GetTimeSeconds();
+
+			GetCharacterMovement()->SetMovementMode(MOVE_Flying);
+
+            MouseMovement = FVector2D::ZeroVector;
+
+			// Запускаем таймер на завершение floating
+			GetWorldTimerManager().SetTimer(
+				_floatingTimerHandle,
+				this,
+				&AMario::EndFloating,
+				MovementParams.FloatingDuration,
+				false
+			);
+			break;
+		case EStateOfCharacter::Damage:
+		case EStateOfCharacter::Dead:
+			break;
+		default:
+			break;
+	}
+}
+
+void AMario::EndFloating()
+{
+	CharacterState.bIsFloating = false;
+	
+	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+	// Запускаем кулдаун
+	CharacterState.FloatingCooldownRemaining = MovementParams.FloatingCooldown;
+	
+	// Переходим в состояние падения, если персонаж в воздухе
+	if (GetCharacterMovement()->IsFalling())
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Falling;
+	}
+	else if (!CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Idle;
+	}
+	else if (CharacterState.SprintPressed)
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Running;
+	}
+	else
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Walking;
+	}
+
+	// Сбрасываем движение мыши
+	MouseMovement = FVector2D::ZeroVector;
+}
+
+void AMario::HandleMouseMovement(const FInputActionValue& Value)
+{
+	// Получаем значение оси мыши (2D)
+	MouseMovement += Value.Get<FVector2D>();
+}
+
 void AMario::UpdateAnimationVariables()
 {
 	if (!GetCharacterMovement())
@@ -552,48 +646,63 @@ void AMario::UpdateAnimationVariables()
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
 			break;
 			
 		case EStateOfCharacter::Walking:
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
 			break;
 			
 		case EStateOfCharacter::Running:
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
 			break;
 			
 		case EStateOfCharacter::Jumping:
 			AnimationVars.bIsFalling = Velocity.Z < 0.0f;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
 			break;
 			
 		case EStateOfCharacter::DoubleJumping:
 			AnimationVars.bIsFalling = Velocity.Z < 0.0f;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
 			break;
 			
 		case EStateOfCharacter::Falling:
 			AnimationVars.bIsFalling = true;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
 			break;
 			
 		case EStateOfCharacter::Dashing:
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = true;
 			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
+			break;
+
+		case EStateOfCharacter::Floating:
+			AnimationVars.bIsFalling = false;
+			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = true;
 			break;
 			
 		case EStateOfCharacter::Damage:
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = true;
+			AnimationVars.bIsFloating = false;
 			break;
 			
 		case EStateOfCharacter::Dead:
@@ -601,6 +710,7 @@ void AMario::UpdateAnimationVariables()
 			AnimationVars.bIsFalling = false;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
 			break;
 			
 		default:

@@ -18,6 +18,7 @@ enum class EStateOfCharacter : uint8
 	DoubleJumping UMETA(DisplayName = "DoubleJumping"),
 	Falling UMETA(DisplayName = "Falling"),
 	Dashing UMETA(DisplayName = "Dashing"),
+	Floating UMETA(DisplayName = "Floating"),
 	Damage UMETA(DisplayName = "Damage"),
 	Dead UMETA(DisplayName = "Dead")
 };
@@ -71,6 +72,17 @@ struct FCharacterState
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
 	float DamageStartTime;
 
+	// Флаг состояния floating
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
+	bool bIsFloating;
+
+	// Оставшееся время кулдауна floating
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
+	float FloatingCooldownRemaining;
+
+	// Время начала floating
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Character State")
+	float FloatingStartTime;
 
 	// Конструктор по умолчанию
 	FCharacterState()
@@ -85,6 +97,9 @@ struct FCharacterState
 		, bLastDirectionRight(true)
 		, DamageImmunityDuration(1.0f)
 		, DamageStartTime(0.0f)
+		, bIsFloating(false)
+		, FloatingCooldownRemaining(0.0f)
+		, FloatingStartTime(0.0f)
 	{
 	}
 };
@@ -123,6 +138,15 @@ struct FMovementParameters
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
 	float DoubleJumpZVelocity = 500.0f;
 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float FloatingDuration = 5.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float FloatingCooldown = 10.0f;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+	float FloatingSpeed = 500.0f;
+
 };
 
 // Структура для переменных анимации
@@ -159,6 +183,10 @@ struct FAnimationVariables
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	bool bIsDead = false;
 
+	// Находится ли персонаж в состоянии floating
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+	bool bIsFloating = false;
+
 	// Конструктор по умолчанию
 	FAnimationVariables()
 		: Speed(0.0f)
@@ -168,6 +196,7 @@ struct FAnimationVariables
 		, bIsDashing(false)
 		, bIsDamaged(false)
 		, bIsDead(false)
+		, bIsFloating(false)
 	{
 	}
 };
@@ -205,6 +234,8 @@ public:
 	void StartSprint();
 	void StopSprint();
 	void StartDash();
+	void StartFloating();
+	void HandleMouseMovement(const FInputActionValue& Value);
 	
 	UFUNCTION(BlueprintCallable, Category = "Character")
 	void TriggerDamage();
@@ -249,6 +280,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	FORCEINLINE bool GetIsDead() const { return AnimationVars.bIsDead; }
 
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE bool GetIsFloating() const { return AnimationVars.bIsFloating; }
+
 	// ===== Геттеры для параметров движения =====
 	
 	UFUNCTION(BlueprintCallable, Category = "Movement")
@@ -263,13 +297,23 @@ public:
 private:
     FTimerHandle _dashTimerHandle;
 	FTimerHandle _damageTimerHandle;
+	FTimerHandle _floatingTimerHandle;
 
+
+	// Вектор движения мыши для floating
+	FVector2D MouseMovement;
 	
 	// Функция для завершения дэша
 	void EndDash();
 	
 	// Функция для завершения состояния урона
 	void EndDamage();
+
+	// Функция для завершения floating
+	void EndFloating();
+
+	// Функция для уменьшения кулдауна floating
+	void UpdateFloatingCooldown();
 	
 	// Функция обновления переменных для анимации
 	void UpdateAnimationVariables();

@@ -48,6 +48,12 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputAction* DeathAction;
 
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* FloatingAction; // F key
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
+	class UInputAction* MouseMovementAction; // Mouse Axis2D
+
 private:
 	// ===== Функции обработки ввода =====
 	
@@ -61,6 +67,8 @@ private:
 	void HandleSprintCompleted();
 	void HandleDash();
 	void HandleDeath();
+	void HandleFloating();
+	void HandleMouseMovement(const FInputActionValue& Value);
 
 	// Кэшированная ссылка на управляемого персонажа Mario
 	class AMario* ControlledMario;

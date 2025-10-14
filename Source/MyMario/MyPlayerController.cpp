@@ -91,6 +91,20 @@ void AMyPlayerController::SetupInputComponent()
 			EnhancedInputComponent->BindAction(DeathAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleDeath);
 			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: DeathAction привязан"));
 		}
+
+		// Floating (F)
+		if (FloatingAction)
+		{
+			EnhancedInputComponent->BindAction(FloatingAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleFloating);
+			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: FloatingAction привязан"));
+		}
+
+		// Движение мыши (Mouse Axis2D)
+		if (MouseMovementAction)
+		{
+			EnhancedInputComponent->BindAction(MouseMovementAction, ETriggerEvent::Triggered, this, &AMyPlayerController::HandleMouseMovement);
+			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: MouseMovementAction привязан"));
+		}
 	}
 }
 
@@ -193,6 +207,24 @@ void AMyPlayerController::HandleDeath()
 	if (ControlledMario)
 	{
 		ControlledMario->TriggerDamage();
+	}
+}
+
+void AMyPlayerController::HandleFloating()
+{
+	UE_LOG(LogTemp, Log, TEXT("MyPlayerController: Floating (F) Triggered"));
+
+	if (ControlledMario)
+	{
+		ControlledMario->StartFloating();
+	}
+}
+
+void AMyPlayerController::HandleMouseMovement(const FInputActionValue& Value)
+{
+	if (ControlledMario)
+	{
+		ControlledMario->HandleMouseMovement(Value);
 	}
 }
 
