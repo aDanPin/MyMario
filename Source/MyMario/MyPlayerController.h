@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,9 +5,6 @@
 #include "InputActionValue.h"
 #include "MyPlayerController.generated.h"
 
-/**
- * PlayerController для обработки ввода игрока и передачи команд в Mario
- */
 UCLASS()
 class MYMARIO_API AMyPlayerController : public APlayerController
 {
@@ -23,18 +18,15 @@ protected:
 	virtual void SetupInputComponent() override;
 
 public:
-	// ===== Enhanced Input System =====
 	
-	// Input Mapping Context
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputMappingContext* DefaultMappingContext;
 
-	// Input Actions
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* MoveRightAction; // D key
+	class UInputAction* MoveRightAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* MoveLeftAction; // A key
+	class UInputAction* MoveLeftAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
 	class UInputAction* JumpAction;
@@ -49,13 +41,12 @@ public:
 	class UInputAction* DeathAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* FloatingAction; // F key
+	class UInputAction* FloatingAction;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Input")
-	class UInputAction* MouseMovementAction; // Mouse Axis2D
+	class UInputAction* MouseMovementAction;
 
 private:
-	// ===== Функции обработки ввода =====
 	
 	void HandleMoveRightStarted();
 	void HandleMoveRightCompleted();
@@ -70,7 +61,6 @@ private:
 	void HandleFloating();
 	void HandleMouseMovement(const FInputActionValue& Value);
 
-	// Кэшированная ссылка на управляемого персонажа Mario
 	class AMario* ControlledMario;
 };
 

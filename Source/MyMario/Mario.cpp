@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "Mario.h"
 
 #include <functional>
@@ -10,26 +8,20 @@
 #include "Particles/ParticleSystemComponent.h"
 
 
-// Sets default values
 AMario::AMario()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+ 	PrimaryActorTick.bCanEverTick = true;
 
-	// Инициализация структуры состояния персонажа
 	CharacterState = FCharacterState();
 
-	// Инициализация вектора движения мыши
 	MouseMovement = FVector2D::ZeroVector;
 
 }
 
-// Called when the game starts or when spawned
 void AMario::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	// Установка начальной скорости ходьбы
 	GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
 	GetCharacterMovement()->JumpZVelocity = MovementParams.JumpZVelocity;
 
@@ -53,12 +45,10 @@ void AMario::BeginPlay()
 	}
 }
 
-// Called every frame
 void AMario::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	// Обновляем переменные для анимации
 	UpdateAnimationVariables();
 	
 	FVector InputVector = FVector::ZeroVector;
@@ -68,7 +58,6 @@ void AMario::Tick(float DeltaTime)
 		case EStateOfCharacter::Running:
 		case EStateOfCharacter::Falling:
 		case EStateOfCharacter::FallAfterDoubleJump:
-			// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
 			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 			{
 				InputVector = FVector::LeftVector;
@@ -92,7 +81,6 @@ void AMario::Tick(float DeltaTime)
 
 			break;
 		case EStateOfCharacter::Jumping:
-			// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
 			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 			{
 				InputVector = FVector::LeftVector;
@@ -122,7 +110,6 @@ void AMario::Tick(float DeltaTime)
 			
 			break;
 		case EStateOfCharacter::DoubleJumping:
-			// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
 			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 			{
 				InputVector = FVector::LeftVector;
@@ -154,13 +141,11 @@ void AMario::Tick(float DeltaTime)
 		case EStateOfCharacter::Dashing:
 			break;
 		case EStateOfCharacter::Floating:
-			// Применяем движение на основе ввода мыши
 			if (MouseMovement.SizeSquared() > 0.0f)
 			{
 				FVector MovementDirection = FVector(MouseMovement.X, 0.0f, 0.0f);
 				MovementDirection.Normalize();
 
-				// перемещение по X и Y (например, по плоскости X-Y)
 				AddMovementInput(GetActorRightVector(), MouseMovement.X  * MovementParams.FloatingSpeed * DeltaTime);
 				AddMovementInput(GetActorUpVector(), MouseMovement.Y * MovementParams.FloatingSpeed * DeltaTime);
 
@@ -179,23 +164,17 @@ void AMario::Tick(float DeltaTime)
 			}
 			break;
 		case EStateOfCharacter::Damage:
-			// Во время урона нельзя применять никакую силу
 			break;
 		default:
 			break;
 	}
 }
 
-// Called to bind functionality to input
 void AMario::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 	
-	// Теперь ввод обрабатывается через MyPlayerController
-	// Эта функция оставлена для совместимости
 }
-
-// ===== Функции обработки ввода =====
 
 void AMario::Move(const float Value)
 {
@@ -212,7 +191,6 @@ void AMario::Move(const float Value)
     {
 		if (Controller && MovementValue != 0.0f)
 		{
-			// Поворот персонажа в направлении движения через скелетную компоненту
 			if (MovementValue > 0.0f)
 			{
 				CharacterState.bIsDPressed = true;
@@ -251,7 +229,6 @@ void AMario::Move(const float Value)
 			moveFunc(Value);
 			break;
 		case EStateOfCharacter::Damage:
-			// Во время урона движение заблокировано
 			break;
 		default:
 			break;
@@ -400,7 +377,6 @@ void AMario::Landed(const FHitResult& Hit)
 {
     Super::Landed(Hit);
 
-	// Обрабатываем приземление для всех состояний в воздухе
 	if (CharacterState.CurrentState == EStateOfCharacter::Jumping ||
 	    CharacterState.CurrentState == EStateOfCharacter::DoubleJumping ||
 	    CharacterState.CurrentState == EStateOfCharacter::Falling ||
@@ -414,7 +390,7 @@ void AMario::Landed(const FHitResult& Hit)
 		{
 			CharacterState.CurrentState = EStateOfCharacter::Running;
 		}
-		else // if CharacterState.IsDPressed || CharacterState.IsAPressed
+		else
 		{
 			CharacterState.CurrentState = EStateOfCharacter::Walking;
 		}
@@ -443,7 +419,6 @@ void AMario::StartSprint()
 			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
 			break;
 		case EStateOfCharacter::Damage:
-			// Во время урона бег заблокирован
 			break;
 		default:
 			break;
@@ -530,7 +505,6 @@ void AMario::StartDash()
 			);
 			break;
 		case EStateOfCharacter::Damage:
-			// Во время урона дэш заблокирован
 			break;
 		default:
 			break;
@@ -549,7 +523,7 @@ void AMario::EndDash()
 		GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
 		CharacterState.CurrentState = EStateOfCharacter::Running;
 	}
-	else // if CharacterState.IsDPressed || CharacterState.IsAPressed
+	else
 	{
 		CharacterState.CurrentState = EStateOfCharacter::Walking;
 	}
@@ -568,17 +542,14 @@ void AMario::TriggerDamage()
 		case EStateOfCharacter::DoubleJumping:
 		case EStateOfCharacter::FallAfterDoubleJump:
 		case EStateOfCharacter::Falling:
-					// Проверяем, не находится ли уже персонаж в состоянии урона или неуязвимости
 			if (CharacterState.CurrentState == EStateOfCharacter::Damage || 
 				CharacterState.CurrentState == EStateOfCharacter::Dead)
 			{
 				return;
 			}
 
-			// Переходим в состояние урона
 			CharacterState.CurrentState = EStateOfCharacter::Damage;
 
-			// Останавливаем персонажа - убираем все силы
 			GetCharacterMovement()->StopMovementImmediately();
 			GetCharacterMovement()->Velocity = FVector::ZeroVector;
 
@@ -592,7 +563,6 @@ void AMario::TriggerDamage()
 			}
 			
 			
-			// Сделать персонажа красным
 			if (GetMesh())
 			{
 				int32 NumMaterials = GetMesh()->GetNumMaterials();
@@ -615,6 +585,8 @@ void AMario::TriggerDamage()
 				false
 			);
 
+		case EStateOfCharacter::Damage:
+			break;
 
 		default:
 			break;
@@ -623,7 +595,29 @@ void AMario::TriggerDamage()
 
 void AMario::EndDamage()
 {
-	CharacterState.CurrentState = EStateOfCharacter::Idle;
+	if(GetMovementComponent()->IsFalling() && GetVelocity().Z <= 0.0f)
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Falling;
+	}
+	else if(GetMovementComponent()->IsFalling() && GetVelocity().Z > 0.0f)
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Jumping;
+	}
+	else if (!CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Idle;
+	}
+	else if (CharacterState.SprintPressed)
+	{
+		GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
+		CharacterState.CurrentState = EStateOfCharacter::Running;
+	}
+	else
+	{
+		CharacterState.CurrentState = EStateOfCharacter::Walking;
+	}
+
+
 
 	UMaterialInstanceDynamic* DynMat = nullptr;
 	if (GetMesh())
@@ -646,7 +640,6 @@ void AMario::TriggerDeath()
 
 void AMario::StartFloating()
 {
-	// Проверяем, доступен ли floating (не на кулдауне и не в состоянии урона/смерти)
 	if (GetWorld()->GetTimeSeconds() - CharacterState.FloatingStartTime  < CharacterState.FloatingCooldownRemaining)
 	{
 		return;
@@ -672,7 +665,6 @@ void AMario::StartFloating()
             MouseMovement = FVector2D::ZeroVector;
 
 			
-			// Включаем партикл и отключаем меш
 			if (FloatingParticle)
 			{
 				FloatingParticle->Activate(true);
@@ -682,7 +674,6 @@ void AMario::StartFloating()
 				GetMesh()->SetVisibility(false);
 			}
 
-			// Запускаем таймер на завершение floating
 			GetWorldTimerManager().SetTimer(
 				_floatingTimerHandle,
 				this,
@@ -705,7 +696,6 @@ void AMario::EndFloating()
 	
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
 
-	// Отключаем партикл и включаем меш
 	if (FloatingParticle)
 	{
 		FloatingParticle->Deactivate();
@@ -715,10 +705,8 @@ void AMario::EndFloating()
 		GetMesh()->SetVisibility(true);
 	}
 
-	// Запускаем кулдаун
 	CharacterState.FloatingCooldownRemaining = MovementParams.FloatingCooldown;
 	
-	// Переходим в состояние падения, если персонаж в воздухе
 	if (GetCharacterMovement()->IsFalling())
 	{
 		CharacterState.CurrentState = EStateOfCharacter::Falling;
@@ -736,13 +724,11 @@ void AMario::EndFloating()
 		CharacterState.CurrentState = EStateOfCharacter::Walking;
 	}
 
-	// Сбрасываем движение мыши
 	MouseMovement = FVector2D::ZeroVector;
 }
 
 void AMario::HandleMouseMovement(const FInputActionValue& Value)
 {
-	// Получаем значение оси мыши (2D)
 	MouseMovement += Value.Get<FVector2D>();
 }
 
@@ -753,31 +739,26 @@ void AMario::UpdateAnimationVariables()
 		return;
 	}
 
-	// Получаем текущую скорость персонажа
 	FVector Velocity = GetVelocity();
 	
-	// Вычисляем горизонтальную скорость (2D)
 	FVector HorizontalVelocity2D = FVector(Velocity.X, Velocity.Y, 0.0f);
 	AnimationVars.Speed = HorizontalVelocity2D.Size();
 	
-	// Определяем направление движения
 	if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 	{
-		AnimationVars.Direction = 1.0f; // Вправо
+		AnimationVars.Direction = 1.0f;
 	}
 	else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
 	{
-		AnimationVars.Direction = -1.0f; // Влево
+		AnimationVars.Direction = -1.0f;
 	}
 	else
 	{
-		AnimationVars.Direction = 0.0f; // Не движется
+		AnimationVars.Direction = 0.0f;
 	}
 	
-	// Проверка, находится ли персонаж в воздухе
 	AnimationVars.bIsInAir = GetCharacterMovement()->IsFalling();
 	
-	// Обновление состояний анимации на основе текущего состояния персонажа
 	switch (CharacterState.CurrentState)
 	{
 		case EStateOfCharacter::Idle:

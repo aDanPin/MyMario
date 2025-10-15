@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #include "MyPlayerController.h"
 #include "Mario.h"
 #include "EnhancedInputComponent.h"
@@ -14,7 +12,6 @@ void AMyPlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// Добавление Input Mapping Context
 	if (UEnhancedInputLocalPlayerSubsystem* Subsystem = ULocalPlayer::GetSubsystem<UEnhancedInputLocalPlayerSubsystem>(GetLocalPlayer()))
 	{
 		if (DefaultMappingContext)
@@ -28,7 +25,6 @@ void AMyPlayerController::BeginPlay()
 		}
 	}
 
-	// Получение ссылки на управляемого персонажа Mario
 	ControlledMario = Cast<AMario>(GetPawn());
 	if (ControlledMario)
 	{
@@ -44,10 +40,8 @@ void AMyPlayerController::SetupInputComponent()
 {
 	Super::SetupInputComponent();
 
-	// Привязка Enhanced Input Actions
 	if (UEnhancedInputComponent* EnhancedInputComponent = Cast<UEnhancedInputComponent>(InputComponent))
 	{
-		// Движение вправо (D)
 		if (MoveRightAction)
 		{
 			EnhancedInputComponent->BindAction(MoveRightAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleMoveRightStarted);
@@ -55,7 +49,6 @@ void AMyPlayerController::SetupInputComponent()
 			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: MoveRightAction привязан"));
 		}
 
-		// Движение влево (A)
 		if (MoveLeftAction)
 		{
 			EnhancedInputComponent->BindAction(MoveLeftAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleMoveLeftStarted);
@@ -63,14 +56,12 @@ void AMyPlayerController::SetupInputComponent()
 			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: MoveLeftAction привязан"));
 		}
 
-		// Прыжок (Space)
 		if (JumpAction)
 		{
 			EnhancedInputComponent->BindAction(JumpAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleJumpStarted);
 			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: JumpAction привязан"));
 		}
 
-		// Спринт (Shift)
 		if (SprintAction)
 		{
 			EnhancedInputComponent->BindAction(SprintAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleSprintStarted);
@@ -78,28 +69,24 @@ void AMyPlayerController::SetupInputComponent()
 			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: SprintAction привязан с Started и Completed"));
 		}
 
-		// Дэш (Ctrl)
 		if (DashAction)
 		{
 			EnhancedInputComponent->BindAction(DashAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleDash);
 			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: DashAction привязан"));
 		}
 
-		// Смерть (M)
 		if (DeathAction)
 		{
 			EnhancedInputComponent->BindAction(DeathAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleDeath);
 			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: DeathAction привязан"));
 		}
 
-		// Floating (F)
 		if (FloatingAction)
 		{
 			EnhancedInputComponent->BindAction(FloatingAction, ETriggerEvent::Started, this, &AMyPlayerController::HandleFloating);
 			UE_LOG(LogTemp, Log, TEXT("MyPlayerController: FloatingAction привязан"));
 		}
 
-		// Движение мыши (Mouse Axis2D)
 		if (MouseMovementAction)
 		{
 			EnhancedInputComponent->BindAction(MouseMovementAction, ETriggerEvent::Triggered, this, &AMyPlayerController::HandleMouseMovement);
@@ -107,8 +94,6 @@ void AMyPlayerController::SetupInputComponent()
 		}
 	}
 }
-
-// ===== Функции обработки ввода с логированием =====
 
 void AMyPlayerController::HandleMoveRightStarted()
 {
