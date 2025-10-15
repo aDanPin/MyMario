@@ -7,6 +7,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "TimerManager.h"
+#include "Particles/ParticleSystemComponent.h"
 
 
 // Sets default values
@@ -31,13 +32,31 @@ void AMario::BeginPlay()
 	// Установка начальной скорости ходьбы
 	GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
 	GetCharacterMovement()->JumpZVelocity = MovementParams.JumpZVelocity;
+
+	if (!FloatingParticle)
+	{
+		if (UCapsuleComponent* Capsule = GetCapsuleComponent())
+		{
+			TArray<USceneComponent*> ChildComponents;
+			Capsule->GetChildrenComponents(true, ChildComponents);
+			for (USceneComponent* Child : ChildComponents)
+			{
+				if (UParticleSystemComponent* PSC = Cast<UParticleSystemComponent>(Child))
+				{
+					FloatingParticle = PSC;
+					FloatingParticle->Deactivate();
+
+					break;
+				}
+			}
+		}
+	}
 }
 
 // Called every frame
 void AMario::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	// updateCharacterState(DeltaTime);
 	
 	// Обновляем переменные для анимации
 	UpdateAnimationVariables();
@@ -47,20 +66,20 @@ void AMario::Tick(float DeltaTime)
 	{
 		case EStateOfCharacter::Walking:
 		case EStateOfCharacter::Running:
-		case EStateOfCharacter::Jumping:
-		case EStateOfCharacter::DoubleJumping:
-		// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
-		if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
-		{
-			InputVector = FVector::LeftVector;
-		}
-		else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
-		{
-			InputVector = FVector::RightVector;
-		}
-		else
-		{
-			InputVector = FVector::ZeroVector;
+		case EStateOfCharacter::Falling:
+		case EStateOfCharacter::FallAfterDoubleJump:
+			// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
+			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+			{
+				InputVector = FVector::LeftVector;
+			}
+			else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
+			{
+				InputVector = FVector::RightVector;
+			}
+			else
+			{
+				InputVector = FVector::ZeroVector;
 			}
 
 			if(CharacterState.SprintPressed)
@@ -70,6 +89,67 @@ void AMario::Tick(float DeltaTime)
 			{
 				GetCharacterMovement()->AddInputVector(InputVector * MovementParams.WalkSpeed);
 			}
+
+			break;
+		case EStateOfCharacter::Jumping:
+			// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
+			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+			{
+				InputVector = FVector::LeftVector;
+			}
+			else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
+			{
+				InputVector = FVector::RightVector;
+			}
+			else
+			{
+				InputVector = FVector::ZeroVector;
+			}
+
+			if(CharacterState.SprintPressed)
+			{
+				GetCharacterMovement()->AddInputVector(InputVector * MovementParams.SprintSpeed);				}
+			else
+			{
+				GetCharacterMovement()->AddInputVector(InputVector * MovementParams.WalkSpeed);
+			}
+
+			// Проверяем вертикальную скорость персонажа.
+			if (GetVelocity().Z < 0.0f)
+			{
+				CharacterState.CurrentState = EStateOfCharacter::Falling;
+			}
+			
+			break;
+		case EStateOfCharacter::DoubleJumping:
+			// Перед движением обязательно обновляем WalkSpeed (например, если изменился режим бега/ходьбы)
+			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+			{
+				InputVector = FVector::LeftVector;
+			}
+			else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
+			{
+				InputVector = FVector::RightVector;
+			}
+			else
+			{
+				InputVector = FVector::ZeroVector;
+			}
+
+			if(CharacterState.SprintPressed)
+			{
+				GetCharacterMovement()->AddInputVector(InputVector * MovementParams.SprintSpeed);				}
+			else
+			{
+				GetCharacterMovement()->AddInputVector(InputVector * MovementParams.WalkSpeed);
+			}
+
+			// Проверяем вертикальную скорость персонажа.
+			if (GetVelocity().Z < 0.0f)
+			{
+				CharacterState.CurrentState = EStateOfCharacter::FallAfterDoubleJump;
+			}
+			
 			break;
 		case EStateOfCharacter::Dashing:
 			break;
@@ -162,6 +242,12 @@ void AMario::Move(const float Value)
 			moveFunc(Value);
 			break;
 		case EStateOfCharacter::DoubleJumping:
+			moveFunc(Value);
+			break;
+		case EStateOfCharacter::Falling:
+			moveFunc(Value);
+			break;
+		case EStateOfCharacter::FallAfterDoubleJump:
 			moveFunc(Value);
 			break;
 		case EStateOfCharacter::Damage:
@@ -262,6 +348,12 @@ void AMario::StopMove(const float Value)
 		case EStateOfCharacter::DoubleJumping:
 			stopMoveFunc(Value);
 			break;
+		case EStateOfCharacter::Falling:
+			stopMoveFunc(Value);
+			break;
+		case EStateOfCharacter::FallAfterDoubleJump:
+			stopMoveFunc(Value);
+			break;
 		case EStateOfCharacter::Dashing:
 			stopMoveFunc(Value);
 			break;
@@ -291,9 +383,11 @@ void AMario::Jump()
 			jumpfunc();
 			break;
 		case EStateOfCharacter::Jumping:
+		case EStateOfCharacter::Falling:
 			jumpfunc();
 			CharacterState.CurrentState = EStateOfCharacter::DoubleJumping;
 			break;
+		case EStateOfCharacter::FallAfterDoubleJump:
 		case EStateOfCharacter::Damage:
 			// Во время урона прыжок заблокирован
 			break;
@@ -309,7 +403,8 @@ void AMario::Landed(const FHitResult& Hit)
 	// Обрабатываем приземление для всех состояний в воздухе
 	if (CharacterState.CurrentState == EStateOfCharacter::Jumping ||
 	    CharacterState.CurrentState == EStateOfCharacter::DoubleJumping ||
-	    CharacterState.CurrentState == EStateOfCharacter::Falling)
+	    CharacterState.CurrentState == EStateOfCharacter::Falling ||
+	    CharacterState.CurrentState == EStateOfCharacter::FallAfterDoubleJump)
 	{
 		if (!CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 		{
@@ -342,6 +437,9 @@ void AMario::StartSprint()
 			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
 			break;
 		case EStateOfCharacter::DoubleJumping:
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
+			break;
+		case EStateOfCharacter::FallAfterDoubleJump:
 			GetCharacterMovement()->MaxWalkSpeed = MovementParams.SprintSpeed;
 			break;
 		case EStateOfCharacter::Damage:
@@ -381,6 +479,9 @@ void AMario::StopSprint()
 		case EStateOfCharacter::DoubleJumping:
 	     	GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
 		    break;
+		case EStateOfCharacter::FallAfterDoubleJump:
+			GetCharacterMovement()->MaxWalkSpeed = MovementParams.WalkSpeed;
+			break;
 		case EStateOfCharacter::Dashing:
 			break;
 		default:
@@ -397,11 +498,21 @@ void AMario::StartDash()
 		case EStateOfCharacter::Running:
 		case EStateOfCharacter::Jumping:
 		case EStateOfCharacter::DoubleJumping:
+		case EStateOfCharacter::Falling:
+		case EStateOfCharacter::FallAfterDoubleJump:
 			CharacterState.CurrentState = EStateOfCharacter::Dashing;
 
 			GetCharacterMovement()->GroundFriction = 0.f;
 
-			if (CharacterState.bLastDirectionRight)
+			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
+			{
+				LaunchCharacter(FVector(0.0f, -MovementParams.DashSpeed, 0.0f) , true, true);
+			}
+			else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
+			{
+				LaunchCharacter(FVector(0.0f, MovementParams.DashSpeed, 0.0f), true, true);
+			}
+			else if (CharacterState.bLastDirectionRight)
 			{
 				LaunchCharacter(FVector(0.0f, -MovementParams.DashSpeed, 0.0f) , true, true);
 			}
@@ -455,6 +566,8 @@ void AMario::TriggerDamage()
 		case EStateOfCharacter::Running:
 		case EStateOfCharacter::Jumping:
 		case EStateOfCharacter::DoubleJumping:
+		case EStateOfCharacter::FallAfterDoubleJump:
+		case EStateOfCharacter::Falling:
 					// Проверяем, не находится ли уже персонаж в состоянии урона или неуязвимости
 			if (CharacterState.CurrentState == EStateOfCharacter::Damage || 
 				CharacterState.CurrentState == EStateOfCharacter::Dead)
@@ -549,6 +662,7 @@ void AMario::StartFloating()
 		case EStateOfCharacter::Jumping:
 		case EStateOfCharacter::DoubleJumping:
 		case EStateOfCharacter::Falling:
+		case EStateOfCharacter::FallAfterDoubleJump:
 			CharacterState.CurrentState = EStateOfCharacter::Floating;
 			CharacterState.bIsFloating = true;
 			CharacterState.FloatingStartTime = GetWorld()->GetTimeSeconds();
@@ -556,6 +670,17 @@ void AMario::StartFloating()
 			GetCharacterMovement()->SetMovementMode(MOVE_Flying);
 
             MouseMovement = FVector2D::ZeroVector;
+
+			
+			// Включаем партикл и отключаем меш
+			if (FloatingParticle)
+			{
+				FloatingParticle->Activate(true);
+			}
+			if (GetMesh())
+			{
+				GetMesh()->SetVisibility(false);
+			}
 
 			// Запускаем таймер на завершение floating
 			GetWorldTimerManager().SetTimer(
@@ -579,6 +704,16 @@ void AMario::EndFloating()
 	CharacterState.bIsFloating = false;
 	
 	GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+
+	// Отключаем партикл и включаем меш
+	if (FloatingParticle)
+	{
+		FloatingParticle->Deactivate();
+	}
+	if (GetMesh())
+	{
+		GetMesh()->SetVisibility(true);
+	}
 
 	// Запускаем кулдаун
 	CharacterState.FloatingCooldownRemaining = MovementParams.FloatingCooldown;
@@ -681,6 +816,13 @@ void AMario::UpdateAnimationVariables()
 			break;
 			
 		case EStateOfCharacter::Falling:
+			AnimationVars.bIsFalling = true;
+			AnimationVars.bIsDashing = false;
+			AnimationVars.bIsDamaged = false;
+			AnimationVars.bIsFloating = false;
+			break;
+
+		case EStateOfCharacter::FallAfterDoubleJump:
 			AnimationVars.bIsFalling = true;
 			AnimationVars.bIsDashing = false;
 			AnimationVars.bIsDamaged = false;

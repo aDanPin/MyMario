@@ -17,6 +17,7 @@ enum class EStateOfCharacter : uint8
 	Jumping UMETA(DisplayName = "Jumping"),
 	DoubleJumping UMETA(DisplayName = "DoubleJumping"),
 	Falling UMETA(DisplayName = "Falling"),
+	FallAfterDoubleJump UMETA(DisplayName = "FallAfterDoubleJump"),
 	Dashing UMETA(DisplayName = "Dashing"),
 	Floating UMETA(DisplayName = "Floating"),
 	Damage UMETA(DisplayName = "Damage"),
@@ -256,6 +257,11 @@ public:
 	
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	FAnimationVariables AnimationVars;
+
+	// ===== Компонент партикла для Floating =====
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+	class UParticleSystemComponent* FloatingParticle;
 
 	// ===== Геттеры для переменных анимации =====
 	
