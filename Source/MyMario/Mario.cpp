@@ -187,6 +187,15 @@ void AMario::Move(const float Value)
 		CharacterState.bIsAPressed = true;
 	}
 
+	if(CharacterState.bIsDPressed && CharacterState.bIsAPressed && Value > 0.0f)
+	{
+		CharacterState.bLastDirectionRight = true;
+	}
+	else if(CharacterState.bIsAPressed && CharacterState.bIsDPressed && Value < 0.0f)
+	{
+		CharacterState.bLastDirectionRight = false;
+	}
+
     auto moveFunc = std::function<void(float)>([this](float MovementValue)
     {
 		if (Controller && MovementValue != 0.0f)
@@ -481,20 +490,24 @@ void AMario::StartDash()
 
 			if (CharacterState.bIsDPressed && !CharacterState.bIsAPressed)
 			{
+				GetMesh()->SetRelativeRotation(FRotator(0.0f, 00.0f, 0.0f));
 				LaunchCharacter(FVector(0.0f, -MovementParams.DashSpeed, 0.0f) , true, true);
 			}
 			else if (CharacterState.bIsAPressed && !CharacterState.bIsDPressed)
 			{
+				GetMesh()->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 				LaunchCharacter(FVector(0.0f, MovementParams.DashSpeed, 0.0f), true, true);
 			}
 			else if (CharacterState.bLastDirectionRight)
 			{
+				GetMesh()->SetRelativeRotation(FRotator(0.0f, 00.0f, 0.0f));
 				LaunchCharacter(FVector(0.0f, -MovementParams.DashSpeed, 0.0f) , true, true);
 			}
 			else
 			{
+				GetMesh()->SetRelativeRotation(FRotator(0.0f, 180.0f, 0.0f));
 				LaunchCharacter(FVector(0.0f, MovementParams.DashSpeed, 0.0f), true, true);
-			}
+			}	
 
 			GetWorldTimerManager().SetTimer(
 				_dashTimerHandle,
