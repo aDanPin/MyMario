@@ -289,6 +289,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 	FORCEINLINE bool GetIsFloating() const { return AnimationVars.bIsFloating; }
 
+	UFUNCTION(BlueprintCallable, Category = "Animation")
+	FORCEINLINE bool GetIsDoubleJumping() const { return CharacterState.CurrentState == EStateOfCharacter::DoubleJumping; }
+
 	// ===== Геттеры для параметров движения =====
 	
 	UFUNCTION(BlueprintCallable, Category = "Movement")
